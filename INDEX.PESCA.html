@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de Pesca</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #87CEEB;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .game-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #1E3A8A;
+            margin-bottom: 20px;
+        }
+        
+        .game-status {
+            margin-bottom: 20px;
+            font-size: 18px;
+            min-height: 50px;
+        }
+        
+        .fishing-rod {
+            width: 100%;
+            height: 250px;
+            background-image: url('/api/placeholder/800/250');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .lives {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .life {
+            width: 30px;
+            height: 30px;
+            background-color: #4CAF50;
+            margin: 0 5px;
+            border-radius: 50%;
+        }
+        
+        .life.lost {
+            background-color: #ccc;
+        }
+        
+        .btn {
+            background-color: #1E3A8A;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #152C6E;
+        }
+        
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .options {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .option-btn {
+            background-color: #3B82F6;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: left;
+            transition: background-color 0.3s;
+        }
+        
+        .option-btn:hover {
+            background-color: #2563EB;
+        }
+        
+        .fish-animation {
+            position: absolute;
+            width: 100px;
+            height: 60px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: none;
+        }
+        
+        .splash {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            display: none;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: splash 0.5s ease-out;
+        }
+        
+        @keyframes splash {
+            0% {
+                transform: translateX(-50%) scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(-50%) scale(2);
+                opacity: 0;
+            }
+        }
+        
+        .result {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 20px;
+            color: #1E3A8A;
+            min-height: 30px;
+        }
+        
+        .game-over {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        
+        .game-over h2 {
+            color: #1E3A8A;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Juego de Pesca en Uruguay</h1>
+        
+        <div class="lives">
+            <div class="life" id="life-1"></div>
+            <div class="life" id="life-2"></div>
+            <div class="life" id="life-3"></div>
+        </div>
+        
+        <div class="game-status" id="game-status">¡Lanza tu caña para empezar a pescar!</div>
+        
+        <div class="fishing-rod" id="fishing-area">
+            <div class="splash" id="splash"></div>
+            <div class="fish-animation" id="fish-animation"></div>
+        </div>
+        
+        <button class="btn" id="cast-btn">Lanzar caña</button>
+        
+        <div class="options" id="options">
+            <div id="question"></div>
+            <button class="option-btn" id="option-1"></button>
+            <button class="option-btn" id="option-2"></button>
+            <button class="option-btn" id="option-3"></button>
+            <button class="option-btn" id="option-4"></button>
+        </div>
+        
+        <div class="result" id="result"></div>
+        
+        <div class="game-over" id="game-over">
+            <h2 id="game-over-text"></h2>
+            <button class="btn" id="restart-btn">Jugar de nuevo</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Game elements
+            const castBtn = document.getElementById('cast-btn');
+            const gameStatus = document.getElementById('game-status');
+            const options = document.getElementById('options');
+            const optionBtns = [
+                document.getElementById('option-1'),
+                document.getElementById('option-2'),
+                document.getElementById('option-3'),
+                document.getElementById('option-4')
+            ];
+            const question = document.getElementById('question');
+            const result = document.getElementById('result');
+            const gameOver = document.getElementById('game-over');
+            const gameOverText = document.getElementById('game-over-text');
+            const restartBtn = document.getElementById('restart-btn');
+            const livesElements = [
+                document.getElementById('life-1'),
+                document.getElementById('life-2'),
+                document.getElementById('life-3')
+            ];
+            const fishingArea = document.getElementById('fishing-area');
+            const splash = document.getElementById('splash');
+            const fishAnimation = document.getElementById('fish-animation');
+            
+            // Game state
+            let lives = 3;
+            
+            // Fish types and their probabilities
+            const fishTypes = [
+                {
+                    name: "Pejerrey",
+                    probability: 10,
+                    question: "¿Qué tamaño mínimo y máximo suele tener un Pejerrey?",
+                    options: [
+                        "Entre 10 y 20 cm",
+                        "Entre 15 y 25 cm",
+                        "Entre 5 y 15 cm",
+                        "Entre 20 y 30 cm"
+                    ],
+                    correctAnswer: 0,
+                    correctMessage: "VICTORIA, HAS PESCADO UN PEJERREY!",
+                    incorrectMessage: "El pejerrey rompió el hilo y escapó",
+                    isGameEnding: true
+                },
+                {
+                    name: "Boga",
+                    probability: 15,
+                    question: "¿En qué zonas de Uruguay habita la boga?",
+                    options: [
+                        "En el río de la Plata",
+                        "En el río Uruguay",
+                        "En toda la cuenca del río Panamá",
+                        "Todas las respuestas son correctas"
+                    ],
+                    correctAnswer: 3,
+                    correctMessage: "Felicitaciones, te llevas una rica boga a casa",
+                    incorrectMessage: "La boga se llevó el cebo y escapó",
+                    isGameEnding: false
+                },
+                {
+                    name: "Sábalo",
+                    probability: 25,
+                    question: "¿De qué se alimentan los Sábalos?",
+                    options: [
+                        "De otros peces",
+                        "De sedimentos",
+                        "De algas marinas",
+                        "De carne humana"
+                    ],
+                    correctAnswer: 1,
+                    correctMessage: "¡Muy bien, te llevas un rico Sábalo!",
+                    incorrectMessage: "El sábalo logró escapar del anzuelo",
+                    isGameEnding: false
+                },
+                {
+                    name: "Bota",
+                    probability: 25,
+                    question: "¿Cuál es la talla media de zapato de un adulto en Uruguay?",
+                    options: [
+                        "44-45 para hombres",
+                        "35-36 para mujeres",
+                        "41-42 para hombres y 37-38 para mujeres",
+                        "Los uruguayos suelen andar descalzos"
+                    ],
+                    correctAnswer: 2,
+                    correctMessage: "¡Enhorabuena, otra bota para la colección!",
+                    incorrectMessage: "¡Desafortunadamente, la bota rompió el hilo y escapó!",
+                    isGameEnding: false
+                },
+                {
+                    name: "Nada",
+                    probability: 15,
+                    question: "¿Qué tipo de pesca es más productiva en Uruguay?",
+                    options: [
+                        "La pesca de río",
+                        "La pesca de mar",
+                        "La pesca de lagos",
+                        "La pesca de piscinas"
+                    ],
+                    correctAnswer: 1,
+                    correctMessage: "Afortunadamente el cebo sigue intacto",
+                    incorrectMessage: "Desafortunadamente el anzuelo se enganchó en una roca y se rompió",
+                    isGameEnding: false
+                },
+                {
+                    name: "Pez colosal",
+                    probability: 10,
+                    question: "¿Cuál es el pez de mayor tamaño que existe en Uruguay?",
+                    options: [
+                        "El Surubí",
+                        "El Dorado",
+                        "El Esturión",
+                        "La raya de agua dulce"
+                    ],
+                    correctAnswer: 2,
+                    correctMessage: "¡VICTORIA: HAS PESCADO UN ESTURIÓN CON TUS PROPIAS MANOS, ERES LEYENDA!",
+                    incorrectMessage: "DERROTA, UN PEZ DE GRAN TAMAÑO TE ARRASTRÓ A LAS PROFUNDIDADES",
+                    isGameEnding: true,
+                    incorrectIsGameEnding: true
+                }
+            ];
+            
+            // Initialize the game
+            function initGame() {
+                lives = 3;
+                updateLives();
+                castBtn.disabled = false;
+                gameStatus.textContent = "¡Lanza tu caña para empezar a pescar!";
+                options.style.display = "none";
+                result.textContent = "";
+                gameOver.style.display = "none";
+            }
+            
+            // Update the lives display
+            function updateLives() {
+                livesElements.forEach((element, index) => {
+                    if (index < lives) {
+                        element.classList.remove('lost');
+                    } else {
+                        element.classList.add('lost');
+                    }
+                });
+            }
+            
+            // Handle the fishing action
+            function castRod() {
+                castBtn.disabled = true;
+                gameStatus.textContent = "Lanzando la caña...";
+                
+                // Show splash animation
+                splash.style.display = "block";
+                setTimeout(() => {
+                    splash.style.display = "none";
+                }, 500);
+                
+                // Delay for suspense
+                setTimeout(() => {
+                    const randomNum = Math.random() * 100;
+                    let cumulativeProbability = 0;
+                    let caughtFish = null;
+                    
+                    // Determine what was caught based on probability
+                    for (const fish of fishTypes) {
+                        cumulativeProbability += fish.probability;
+                        if (randomNum <= cumulativeProbability) {
+                            caughtFish = fish;
+                            break;
+                        }
+                    }
+                    
+                    // Show what was caught
+                    if (caughtFish.name === "Nada") {
+                        gameStatus.textContent = "Parece que no has pescado nada...";
+                    } else if (caughtFish.name === "Bota") {
+                        gameStatus.textContent = "¡Has pescado una bota vieja!";
+                    } else if (caughtFish.name === "Pez colosal") {
+                        gameStatus.textContent = "El hilo ejerce una fuerza extraordinaria, ¡Debe de tratarse de un pez colosal!";
+                    } else {
+                        gameStatus.textContent = `¡Has pescado un ${caughtFish.name}!`;
+                    }
+                    
+                    // Show the question and options
+                    question.textContent = caughtFish.question;
+                    caughtFish.options.forEach((option, index) => {
+                        optionBtns[index].textContent = option;
+                    });
+                    
+                    options.style.display = "flex";
+                    
+                    // Set up the answer handling
+                    optionBtns.forEach((btn, index) => {
+                        btn.onclick = () => {
+                            handleAnswer(index, caughtFish);
+                        };
+                    });
+                    
+                }, 1000);
+            }
+            
+            // Handle the player's answer
+            function handleAnswer(selectedIndex, fish) {
+                options.style.display = "none";
+                
+                if (selectedIndex === fish.correctAnswer) {
+                    // Correct answer
+                    result.textContent = fish.correctMessage;
+                    
+                    if (fish.isGameEnding) {
+                        endGame(true, fish.correctMessage);
+                        return;
+                    }
+                } else {
+                    // Incorrect answer
+                    result.textContent = fish.incorrectMessage;
+                    lives--;
+                    updateLives();
+                    
+                    if (fish.incorrectIsGameEnding) {
+                        endGame(false, fish.incorrectMessage);
+                        return;
+                    }
+                    
+                    if (lives <= 0) {
+                        endGame(false, "PESCASTE UN RESFRIADO, DERROTA");
+                        return;
+                    }
+                }
+                
+                // Allow the player to cast again after a delay
+                setTimeout(() => {
+                    castBtn.disabled = false;
+                    result.textContent = "";
+                    gameStatus.textContent = "¡Lanza tu caña para seguir pescando!";
+                }, 2000);
+            }
+            
+            // End the game
+            function endGame(isVictory, message) {
+                gameOverText.textContent = message;
+                gameOverText.style.color = isVictory ? "#4CAF50" : "#F44336";
+                gameOver.style.display = "flex";
+                castBtn.disabled = true;
+            }
+            
+            // Event listeners
+            castBtn.addEventListener('click', castRod);
+            restartBtn.addEventListener('click', initGame);
+            
+            // Start the game
+            initGame();
+        });
+    </script>
+</body>
+</html>
